@@ -1,0 +1,4 @@
+dynaconf
+python-telegram-bot
+cx_Oracle
+pyboleto
