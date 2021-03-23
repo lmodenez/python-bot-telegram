@@ -1,6 +1,6 @@
 from telegram.ext import ConversationHandler, CallbackQueryHandler, MessageHandler, Filters
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
-
+from startelebot.domain.financas import Financa
 
 class Financas():
 
@@ -12,6 +12,7 @@ class Financas():
         self.parent_state = parent_state
         self.parent_method = parent_method
         self._conversation_handler = None
+        self.financas = Financa()
 
     # properties
 
@@ -71,16 +72,38 @@ class Financas():
 
     def show_invoice(self, update, context):
         document = update.message.text.strip()
-        print(document)
+        context.user_data["client_document"] = document
+
+        client_name = self.financas.get_client_name(document).strip()
+        invoices = self.financas.get_unpaid_invoices(document)
+
         buttons=[
             [InlineKeyboardButton(text="Voltar", callback_data="voltar")]
         ]
         keyboard = InlineKeyboardMarkup(buttons)
-        update.message.reply_text(text="Voce informou o cliente: X\n Essas sao as notas em aberto:", reply_markup=keyboard)
+
+        for invoice in invoices:
+            button = [InlineKeyboardButton(text=f"{invoice}", callback_data=f"{invoice}")]
+            buttons.insert(0, button)
+
+        update.message.reply_text(text=f"Voce informou o cliente: <strong>{client_name.title()}</strong>\nEssas sao as notas em aberto:", reply_markup=keyboard, parse_mode='HTML')
         return self.CHOOSING_INVOICE
 
     def show_ticket(self, update, context):
-        pass
+        client_document = context.user_data.get("client_document")
+        invoice = update.callback_query.data.split('-')[0].strip()
+
+        buttons=[
+            [InlineKeyboardButton(text="Voltar", callback_data="voltar")]
+        ]
+        keyboard = InlineKeyboardMarkup(buttons)
+        
+        update.callback_query.answer()
+        update.callback_query.edit_message_text(text=f"Voce informou a nota: <strong>{invoice}</strong>\nEsses sao os boletos:", reply_markup=keyboard, parse_mode='HTML')
+           
+        result = self.financas.get_client_tickets(client_document, invoice)
+        print(result)
+        return self.END
 
     def ask_for_document(self, update, context):
         buttons=[
